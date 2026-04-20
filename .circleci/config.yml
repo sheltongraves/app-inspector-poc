@@ -24,7 +24,9 @@ jobs:
               --name localstack \
               -p 4566:4566 \
               -e LOCALSTACK_AUTH_TOKEN=$LOCALSTACK_AUTH_TOKEN \
-              -e APPINSPECTOR_ENABLED=1 \
+              -e LOCALSTACK_APPINSPECTOR_ENABLE=1 \
+              -e LOCALSTACK_APPINSPECTOR_DEV_ENABLE=1 \
+              -e EXTRA_CORS_ALLOWED_ORIGINS=* \
               localstack/localstack-pro:latest
 
       - run:
@@ -41,15 +43,8 @@ jobs:
               sleep 5
             done
             curl -s http://localhost:4566/_localstack/health | python3 -m json.tool
-
-      - run:
-          name: Enable App Inspector
-          command: |
-            curl -s -X PUT http://localhost:4566/_localstack/appinspector/status \
-              -H "Content-Type: application/json" \
-              -d '{"status": "enabled"}'
-            echo ""
-            echo "App Inspector enabled."
+            echo "App Inspector status:"
+            curl -s http://localhost:4566/_localstack/appinspector/status
 
       - run:
           name: Deploy event-driven app (with bug)
