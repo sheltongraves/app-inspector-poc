@@ -1,0 +1,70 @@
+name: App Inspector Debug
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+
+    env:
+      LOCALSTACK_ENDPOINT: http://localhost:4566
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install app dependencies
+        run: pip install -r requirements.txt
+
+      - name: Start LocalStack Pro
+        run: |
+          docker run -d \
+            --name localstack \
+            -p 4566:4566 \
+            -e LOCALSTACK_AUTH_TOKEN=${{ secrets.LOCALSTACK_AUTH_TOKEN }} \
+            -e LOCALSTACK_APPINSPECTOR_ENABLE=1 \
+            -e LOCALSTACK_APPINSPECTOR_DEV_ENABLE=1 \
+            -e EXTRA_CORS_ALLOWED_ORIGINS=* \
+            localstack/localstack-pro:latest
+
+      - name: Wait for LocalStack to be ready
+        run: |
+          echo "Waiting for LocalStack..."
+          for i in $(seq 1 40); do
+            STATUS=$(curl -s http://localhost:4566/_localstack/health 2>/dev/null || echo "")
+            if echo "$STATUS" | grep -q '"running"'; then
+              echo "LocalStack is ready."
+              break
+            fi
+            echo "  attempt $i/40 - not ready yet"
+            sleep 5
+          done
+          curl -s http://localhost:4566/_localstack/health | python3 -m json.tool
+
+      - name: Deploy event-driven app (with bug)
+        working-directory: app
+        run: python3 setup.py
+
+      - name: Publish event (triggers the silent-drop bug)
+        working-directory: app
+        run: python3 publish.py
+
+      - name: Wait for traces to be captured
+        run: sleep 5
+
+      - name: Run LocalStack debug agent
+        uses: sheltongraves/debug-agent-action@main
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          localstack-endpoint: http://localhost:4566
+          report-path: /tmp/debug_report.json
