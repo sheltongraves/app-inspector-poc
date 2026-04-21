@@ -49,6 +49,9 @@ jobs:
             echo "  attempt $i/40 - not ready yet"
             sleep 5
           done
+          echo "--- LocalStack container logs ---"
+          docker logs localstack 2>&1 | tail -30
+          echo "--- Health check ---"
           curl -s http://localhost:4566/_localstack/health | python3 -m json.tool
 
       - name: Deploy event-driven app (with bug)
