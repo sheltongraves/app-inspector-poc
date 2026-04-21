@@ -3,6 +3,7 @@ name: App Inspector Debug
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -73,3 +74,4 @@ jobs:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           localstack-endpoint: http://localhost:4566
           report-path: /tmp/debug_report.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
