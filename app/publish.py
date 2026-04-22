@@ -1,5 +1,6 @@
 """
-Publish a test event to SNS with type=order.
+Publish a test event to SNS with type=purchase.
+The subscription filter expects type=order — message is silently dropped.
 """
 import json
 import os
@@ -28,11 +29,14 @@ def publish():
         Message=json.dumps({"orderId": "ORD-001", "amount": 99.99, "currency": "USD"}),
         Subject="New purchase event",
         MessageAttributes={
-            "type": {"DataType": "String", "StringValue": "order"}
+            # BUG: sending type=purchase but filter expects type=order
+            "type": {"DataType": "String", "StringValue": "purchase"}
         },
     )
     print(f"[publish] Message ID: {response['MessageId']}")
-    print("[publish] Sent with MessageAttribute type=order")
+    print("[publish] Sent with MessageAttribute type=purchase")
+    print("[publish] Expected: Lambda invoked, message in SQS")
+    print("[publish] Actual: message silently dropped by SNS filter")
 
 
 if __name__ == "__main__":
