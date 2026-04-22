@@ -9,6 +9,8 @@ on:
 jobs:
   debug:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
 
     env:
       LOCALSTACK_ENDPOINT: http://localhost:4566
